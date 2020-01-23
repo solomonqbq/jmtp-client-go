@@ -17,4 +17,7 @@ func main() {
         panic(err)
     }
     fmt.Println(i)
+    fmt.Println(byte(1))
 }
+
+

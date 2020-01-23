@@ -22,11 +22,11 @@ func Byte2Int(in byte) (int, error) {
     return int(i), err
 }
 
-func FloorMod(x uint, y uint) uint {
+func FloorMod(x int, y int) int {
     return x - FloorDiv(x, y) * y
 }
 
-func FloorDiv(x uint, y uint) uint {
+func FloorDiv(x int, y int) int {
     r := x / y
     if (x ^ y) < 0 && (r * y != x) {
         r--

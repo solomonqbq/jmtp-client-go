@@ -243,7 +243,7 @@ func EncodeRemainingLength(len uint, out bytes.Buffer) error {
     x := len
     var encodeByte byte
     for {
-        encodeByte = util.Uint2Byte(uint64(util.FloorMod(x, 128)))
+        encodeByte = util.Uint2Byte(uint64(util.FloorMod(int(x), 128)))
         if x > 0 {
             out.WriteByte(encodeByte | 128)
         } else {
