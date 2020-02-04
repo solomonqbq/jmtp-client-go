@@ -26,6 +26,14 @@ type ConnectAckPacket interface {
     GetRedirectUrl() string
 }
 
+type CommandAckPacket interface {
+    JmtpPacket
+    GetPacketId() []byte
+    GetCode() int
+    GetMessage() string
+    GetPayload() []byte
+}
+
 type JmtpPacketCodec interface {
     EncodeBody(packet JmtpPacket) ([]byte, error)
     Decode(flagBits byte, input *bytes.Reader) (JmtpPacket, error)

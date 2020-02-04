@@ -10,25 +10,11 @@ import (
 )
 
 func main() {
-
-    //var a = 1
-    //b := make([]byte, 1)
-    //binary.PutVarint(b, int64(a))
-    //reader := bytes.NewReader(b)
-    //i, err := binary.ReadVarint(reader)
-    //if err != nil {
-    //    panic(err)
-    //}
-    //fmt.Println(i)
-    //fmt.Println(byte(1))
-    //c := []byte{'1', '2', '3'}
-    //r := bytes.NewReader(c)
-    //r.ReadByte()
-    //r.ReadByte()
-    //fmt.Println(r.Len())
-    //a := &v1.Connect{}
-    //test(a)
-    jmtpClientTest()
+    b := []byte{'a'}
+    commandAck := v1.NewCommandAck(b, 1, "Test", nil)
+    fmt.Printf("%v\n", commandAck)
+    fmt.Printf("%v\n", commandAck)
+    //jmtpClientTest()
 }
 
 func test(j jmtp_client_go.JmtpPacket) {

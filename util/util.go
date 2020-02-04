@@ -4,9 +4,16 @@ import (
     "fmt"
     "encoding/binary"
     "bytes"
+    "errors"
+)
+
+const (
+    PacketMaxSize = 268435455
+    PacketMinSize = 3
 )
 
 var hexChars = []byte {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'}
+
 
 func Uint2Byte(x uint64) byte {
     out := make([]byte, 1)
@@ -58,4 +65,49 @@ func BytesToHexString(input []byte, length int) string{
         }
     }
     return output
+}
+
+func EncodeRemainingLength(len int, out *bytes.Buffer) error {
+    if len > PacketMaxSize {
+        return errors.New("remaining length overflow")
+    }
+    x := len
+    var encodeByte byte
+    for {
+        if x <= 0 {
+            break
+        }
+        encodeByte = Uint2Byte(uint64(FloorMod(int(x), 128)))
+        x = FloorDiv(x, 128)
+        if x > 0 {
+            out.WriteByte(encodeByte | 128)
+        } else {
+            out.WriteByte(encodeByte)
+        }
+    }
+    return nil
+}
+
+func DecodeRemainingLength(in bytes.Buffer) (int, error) {
+
+    multiplier := 1
+    remainingLength := 0
+    for {
+        encodeByte, err := in.ReadByte()
+        if err != nil {
+            return remainingLength, err
+        }
+        i, err := Byte2Int(encodeByte & 127)
+        if err != nil {
+            return remainingLength, err
+        }
+        remainingLength += i * multiplier
+        if (encodeByte & 128) != 0 {
+            if multiplier == 128 * 128 * 128 {
+                return remainingLength, errors.New("malformed remaining length")
+            }
+        }
+    }
+
+    return remainingLength, nil
 }

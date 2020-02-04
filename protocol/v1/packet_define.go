@@ -12,11 +12,13 @@ type jmtpV1PacketDefine struct {
 
 func newJMTPV1PacketDefine() *jmtpV1PacketDefine{
     jpd := &jmtpV1PacketDefine{}
-    //jpd.packetDefines = make([]jmtpClient.JmtpPacketDefine, 0, 16)
-    //fmt.Println(ConnectPacketDefineInstance.Code())
-    //jpd.packetDefines[ConnectPacketDefineInstance.Code()] = ConnectPacketDefineInstance
-    //jpd.packetDefines[PingPacketDefineIns.Code()] = PingPacketDefineIns
-    //jpd.packetDefines[PongPacketDefineIns.Code()] = PongPacketDefineIns
+    jpd.packetDefines = make([]jmtpClient.JmtpPacketDefine, 16)
+    jpd.packetDefines[ConnectPacketDefineInstance.Code()] = ConnectPacketDefineInstance
+    jpd.packetDefines[ConnectAckPacketDefineInstance.Code()] = ConnectAckPacketDefineInstance
+    jpd.packetDefines[PingPacketDefineIns.Code()] = PingPacketDefineIns
+    jpd.packetDefines[PongPacketDefineIns.Code()] = PongPacketDefineIns
+    jpd.packetDefines[CommandPacketDefineIns.Code()] = CommandPacketDefineIns
+    jpd.packetDefines[CommandPacketDefineIns.Code()] = CommandPacketDefineIns
     return jpd
 }
 

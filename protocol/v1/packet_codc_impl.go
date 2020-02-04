@@ -16,9 +16,11 @@ func encodeBody(packet jmtpClient.JmtpPacket) ([]byte, error) {
     case *Connect:
         err = subpackageConnectBody(writer, pack)
     case *ConnectAck:
-        err = subpacketConnectAckBody(writer, pack)
+        err = subpackageConnectAckBody(writer, pack)
     case *Command:
         err = subpackageCommandBody(writer, pack)
+    case *CommandAck:
+        err = subpackageCommandAckBody(writer, pack)
     default:
         return nil, errors.New(
             fmt.Sprintf(
@@ -69,7 +71,7 @@ func subpackageCommandBody(writer *util.JMTPEncodingWriter, command *Command) er
     return nil
 }
 
-func subpacketConnectAckBody(writer *util.JMTPEncodingWriter, connectAck *ConnectAck) error {
+func subpackageConnectAckBody(writer *util.JMTPEncodingWriter, connectAck *ConnectAck) error {
     if err := writer.WriteVarUnsignedInt(connectAck.GetCode());err != nil {
         return err
     }
@@ -87,6 +89,24 @@ func subpacketConnectAckBody(writer *util.JMTPEncodingWriter, connectAck *Connec
         if err := writer.WriteTinyField(connectAck.GetRedirectUrl(), fieldcodec.StringCodec);err != nil {
             return err
         }
+    }
+    return nil
+}
+
+func subpackageCommandAckBody(writer *util.JMTPEncodingWriter, commandAck *CommandAck) error {
+    if err := writer.WriteTinyByte(commandAck.GetPacketId());err != nil {
+        return err
+    }
+    if err := writer.WriteVarUnsignedInt(commandAck.GetCode());err != nil {
+        return err
+    }
+    if commandAck.Code != 0 {
+        if err := writer.WriteShortField(commandAck.Message, fieldcodec.StringCodec);err != nil {
+            return err
+        }
+    }
+    if err := writer.WriteAllBytes(commandAck.Payload);err != nil {
+        return err
     }
     return nil
 }

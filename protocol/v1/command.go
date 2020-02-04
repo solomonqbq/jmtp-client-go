@@ -7,7 +7,11 @@ import (
     "github.com/jmtp/jmtp-client-go/util/fieldcodec"
 )
 
-var CommandPacketIns = &Command{}
+var (
+    CommandPacketIns = &Command{}
+    CommandPacketDefineIns = &CommandPacketDefine{}
+    CommandPacketCodecInst = &CommandPacketCodec{}
+)
 
 type Command struct {
     PacketId    []byte
@@ -23,7 +27,7 @@ func (c *Command) HasAck() bool {
     return false
 }
 
-var CommandPacketDefineIns = &CommandPacketDefine{}
+
 type CommandPacketDefine struct {
 
 }
@@ -52,7 +56,6 @@ func (c *CommandPacketDefine) ProtocolDefine() jmtpClient.JmtpProtocolDefine {
     return JMTPV1ProtocolDefineInstance
 }
 
-var CommandPacketCodecInst = &CommandPacketCodec{}
 
 type CommandPacketCodec struct {
 
@@ -84,7 +87,7 @@ func (c *CommandPacketCodec) Decode(flagBits byte, input *bytes.Reader) (jmtpCli
 }
 
 func (c *CommandPacketCodec) GetFixedHeader(packet jmtpClient.JmtpPacket) (byte, error) {
-    panic("implement me")
+    return packet.Define().PacketType().BuildHeader(), nil
 }
 
 

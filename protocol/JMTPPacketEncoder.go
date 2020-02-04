@@ -1,12 +1,12 @@
 package protocol
 
 import (
-    jmtpClinet "github.com/jmtp/jmtp-client-go"
+    jmtpClient "github.com/jmtp/jmtp-client-go"
     "bytes"
-    "github.com/jmtp/jmtp-client-go/protocol/v1"
+    "github.com/jmtp/jmtp-client-go/util"
 )
 
-func PacketEncoder(packet jmtpClinet.JmtpPacket) ([]byte, error) {
+func PacketEncoder(packet jmtpClient.JmtpPacket) ([]byte, error) {
     var out bytes.Buffer
     codec := packet.Define().Codec()
     head, err := codec.GetFixedHeader(packet)
@@ -19,7 +19,7 @@ func PacketEncoder(packet jmtpClinet.JmtpPacket) ([]byte, error) {
     if byteBody == nil || len(byteBody) == 0 {
         out.WriteByte(0x00)
     } else {
-        if err := v1.EncodeRemainingLength(len(byteBody), &out);err != nil {
+        if err := util.EncodeRemainingLength(len(byteBody), &out);err != nil {
             return nil, err
         }
         out.Write(byteBody)
