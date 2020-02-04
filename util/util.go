@@ -59,4 +59,3 @@ func BytesToHexString(input []byte, length int) string{
     }
     return output
 }
-

@@ -17,6 +17,10 @@ type JMTPEncodingWriter struct {
     byteBuffer  bytes.Buffer
 }
 
+func NewJMTPEncodingWriter() *JMTPEncodingWriter {
+    return &JMTPEncodingWriter{}
+}
+
 func (jmtp *JMTPEncodingWriter) GetBytes() []byte {
     return jmtp.byteBuffer.Bytes()
 }

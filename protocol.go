@@ -1,6 +1,6 @@
 package jmtp_client_go
 
-import "io"
+import "bytes"
 
 type JmtpPacket interface {
     Define() JmtpPacketDefine
@@ -15,13 +15,21 @@ type ConnectPacket interface {
     GetSerializeType() int16
     GetApplicationId() int
     GetInstanceId() int
-    GetTags()   map[string]string
+    GetTags()   map[string]interface{}
+}
+
+type ConnectAckPacket interface {
+    JmtpPacket
+    GetCode() int
+    GetMessage() string
+    GetRetrySeconds() int
+    GetRedirectUrl() string
 }
 
 type JmtpPacketCodec interface {
-    EncodeBody(packet *JmtpPacket) []byte
-    Decode(flagBits byte, input io.Reader)
-    GetFixedHeader(packet *JmtpPacket) byte
+    EncodeBody(packet JmtpPacket) ([]byte, error)
+    Decode(flagBits byte, input *bytes.Reader) (JmtpPacket, error)
+    GetFixedHeader(packet JmtpPacket) (byte, error)
 }
 
 type JmtpPacketDefine interface {
@@ -30,14 +38,16 @@ type JmtpPacketDefine interface {
     CheckFlag(flagBits byte) bool
     CreatePacket() JmtpPacket
     Codec() JmtpPacketCodec
-    ProtocolDefine()
+    ProtocolDefine() JmtpProtocolDefine
 }
 
 type JmtpProtocolDefine interface {
     Name() string
     Version() int16
     PacketDefine(code int) JmtpPacketDefine
-
+    ConnectPacket(option *ConnectOption) ConnectPacket
+    PingPacket() PingPacket
+    PongPacket() PingPacket
 }
 
 var Connect = NewPacketType(byte(0x1))
@@ -64,7 +74,7 @@ func (p *PacketType) Code() byte {
     return p.code
 }
 
-func (p *PacketType) buildHeader(flagBits ...byte) byte{
+func (p *PacketType) BuildHeader(flagBits ...byte) byte{
     header := p.headerBits
     for _, flagBit := range flagBits {
         header |= flagBit
@@ -85,5 +95,11 @@ type ConnectOption struct {
     SerializeType   int16
     ApplicationId   int
     InstanceId  int
-    Tags    map[string]string
+    Tags    map[string]interface{}
 }
+
+type PingPacket interface {
+    JmtpPacket
+    PingPacket()
+}
+

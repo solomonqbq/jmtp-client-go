@@ -1,4 +1,4 @@
-package protocol
+package v1
 
 import (
     "errors"
@@ -205,7 +205,7 @@ func (ts *TinyMap) Get(key string) []byte {
 func (ts *TinyMap) GetBytes() ([]byte, error) {
 
     var buffer bytes.Buffer
-    err := EncodeRemainingLength(uint(len(ts.tuples)), buffer)
+    err := EncodeRemainingLength(len(ts.tuples), &buffer)
     if err != nil {
         return nil, err
     }
@@ -221,7 +221,7 @@ func getMessage(content []byte) ([]byte, error) {
 
     var buffer bytes.Buffer
     contentLen := len(content)
-    err := EncodeRemainingLength(uint(contentLen), buffer)
+    err := EncodeRemainingLength(contentLen, &buffer)
     if err != nil {
         return nil, err
     }
@@ -235,25 +235,24 @@ func getMessage(content []byte) ([]byte, error) {
     return out[:num], nil
 }
 
-func EncodeRemainingLength(len uint, out bytes.Buffer) error {
-
+func EncodeRemainingLength(len int, out *bytes.Buffer) error {
     if len > PacketMaxSize {
         return errors.New("remaining length overflow")
     }
     x := len
     var encodeByte byte
     for {
+        if x <= 0 {
+            break
+        }
         encodeByte = util.Uint2Byte(uint64(util.FloorMod(int(x), 128)))
+        x = util.FloorDiv(x, 128)
         if x > 0 {
             out.WriteByte(encodeByte | 128)
         } else {
             out.WriteByte(encodeByte)
         }
-        if x <= 0 {
-            break
-        }
     }
-
     return nil
 }
 
