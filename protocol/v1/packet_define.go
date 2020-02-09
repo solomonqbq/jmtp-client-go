@@ -19,11 +19,12 @@ func newJMTPV1PacketDefine() *jmtpV1PacketDefine{
     jpd.packetDefines[PongPacketDefineIns.Code()] = PongPacketDefineIns
     jpd.packetDefines[CommandPacketDefineIns.Code()] = CommandPacketDefineIns
     jpd.packetDefines[CommandPacketDefineIns.Code()] = CommandPacketDefineIns
+    jpd.packetDefines[DisconnectPacketDefineIns.Code()] = DisconnectPacketDefineIns
+    jpd.packetDefines[ReportPacketDefineIns.Code()] = ReportPacketDefineIns
     return jpd
 }
 
-func (j *jmtpV1PacketDefine) Get(code int) jmtpClient.JmtpPacketDefine{
-
+func (j *jmtpV1PacketDefine) Get(code byte) jmtpClient.JmtpPacketDefine{
     if code < 0 || code > 15 {
         return nil
     }

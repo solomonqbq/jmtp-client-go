@@ -8,8 +8,8 @@ import (
 )
 
 var (
-    CommandAckDefineIns = &CommandAckDefine{}
-    CommandAckCodecIns = &CommandAckCodec{}
+    CommandAckDefineIns = &CommandAckPacketDefine{}
+    CommandAckCodecIns = &CommandAckPacketCodec{}
 )
 
 type CommandAck struct {
@@ -52,43 +52,43 @@ func NewCommandAck(packetId []byte, code int, message string, payload []byte) *C
     }
 }
 
-type CommandAckDefine struct {
+type CommandAckPacketDefine struct {
 
 }
 
-func (c *CommandAckDefine) PacketType() *jmtpClient.PacketType {
+func (c *CommandAckPacketDefine) PacketType() *jmtpClient.PacketType {
     return jmtpClient.CommandAck
 }
 
-func (c *CommandAckDefine) Code() byte {
+func (c *CommandAckPacketDefine) Code() byte {
     return c.PacketType().Code()
 }
 
-func (c *CommandAckDefine) CheckFlag(flagBits byte) bool {
+func (c *CommandAckPacketDefine) CheckFlag(flagBits byte) bool {
     return flagBits == 0
 }
 
-func (c *CommandAckDefine) CreatePacket() jmtpClient.JmtpPacket {
+func (c *CommandAckPacketDefine) CreatePacket() jmtpClient.JmtpPacket {
     return &CommandAck{}
 }
 
-func (c *CommandAckDefine) Codec() jmtpClient.JmtpPacketCodec {
+func (c *CommandAckPacketDefine) Codec() jmtpClient.JmtpPacketCodec {
     return CommandAckCodecIns
 }
 
-func (c *CommandAckDefine) ProtocolDefine() jmtpClient.JmtpProtocolDefine {
+func (c *CommandAckPacketDefine) ProtocolDefine() jmtpClient.JmtpProtocolDefine {
     return JMTPV1ProtocolDefineInstance
 }
 
-type CommandAckCodec struct {
+type CommandAckPacketCodec struct {
 
 }
 
-func (c *CommandAckCodec) EncodeBody(packet jmtpClient.JmtpPacket) ([]byte, error) {
+func (c *CommandAckPacketCodec) EncodeBody(packet jmtpClient.JmtpPacket) ([]byte, error) {
     return encodeBody(packet)
 }
 
-func (c *CommandAckCodec) Decode(flagBits byte, input *bytes.Reader) (jmtpClient.JmtpPacket, error) {
+func (c *CommandAckPacketCodec) Decode(flagBits byte, input *bytes.Reader) (jmtpClient.JmtpPacket, error) {
     reader := util.NewJMTPDecodingReader(input)
     commandAck := &CommandAck{}
     if packetId, err := reader.ReadTinyBytesField();err != nil {
@@ -116,7 +116,7 @@ func (c *CommandAckCodec) Decode(flagBits byte, input *bytes.Reader) (jmtpClient
     return commandAck, nil
 }
 
-func (c *CommandAckCodec) GetFixedHeader(packet jmtpClient.JmtpPacket) (byte, error) {
+func (c *CommandAckPacketCodec) GetFixedHeader(packet jmtpClient.JmtpPacket) (byte, error) {
     return packet.Define().PacketType().BuildHeader(), nil
 }
 

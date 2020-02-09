@@ -5,6 +5,9 @@ import (
     "encoding/binary"
     "bytes"
     "errors"
+    "bufio"
+    "strings"
+    "math/big"
 )
 
 const (
@@ -56,7 +59,7 @@ func ReadableHexString(data []byte) string{
     return output
 }
 
-func BytesToHexString(input []byte, length int) string{
+func BytesToHexString(input []byte, length int) string {
     var output string
     if input != nil {
         for i := 0; i < length; i++ {
@@ -67,6 +70,22 @@ func BytesToHexString(input []byte, length int) string{
     return output
 }
 
+func HexStrToBytes(hexStr string) ([]byte, error) {
+    buffer := new(bytes.Buffer)
+    hexArray :=strings.Split(hexStr, " ")
+    for _, hex := range hexArray {
+        bigInt := new(big.Int)
+        bigInt, _ = bigInt.SetString(hex, 16)
+        bytes := bigInt.Bytes()
+        if len(bytes) == 0 {
+            buffer.Write([]byte{0})
+        } else {
+            buffer.Write(bigInt.Bytes())
+        }
+    }
+    return buffer.Bytes(), nil
+}
+
 func EncodeRemainingLength(len int, out *bytes.Buffer) error {
     if len > PacketMaxSize {
         return errors.New("remaining length overflow")
@@ -74,9 +93,6 @@ func EncodeRemainingLength(len int, out *bytes.Buffer) error {
     x := len
     var encodeByte byte
     for {
-        if x <= 0 {
-            break
-        }
         encodeByte = Uint2Byte(uint64(FloorMod(int(x), 128)))
         x = FloorDiv(x, 128)
         if x > 0 {
@@ -84,11 +100,14 @@ func EncodeRemainingLength(len int, out *bytes.Buffer) error {
         } else {
             out.WriteByte(encodeByte)
         }
+        if x <= 0 {
+            break
+        }
     }
     return nil
 }
 
-func DecodeRemainingLength(in bytes.Buffer) (int, error) {
+func DecodeRemainingLength(in *bufio.Reader) (int, error) {
 
     multiplier := 1
     remainingLength := 0
@@ -97,15 +116,19 @@ func DecodeRemainingLength(in bytes.Buffer) (int, error) {
         if err != nil {
             return remainingLength, err
         }
-        i, err := Byte2Int(encodeByte & 127)
-        if err != nil {
-            return remainingLength, err
-        }
-        remainingLength += i * multiplier
-        if (encodeByte & 128) != 0 {
+        remainingLength += (int(encodeByte) & 127) * multiplier
+        //remainingLength += javaEncodeInt * multiplier
+        if (int(encodeByte) & 128) != 0 {
             if multiplier == 128 * 128 * 128 {
                 return remainingLength, errors.New("malformed remaining length")
             }
+            if _, err := in.Peek(1);err == nil {
+                multiplier *= 128
+            } else {
+                return -1, nil
+            }
+        } else {
+            break
         }
     }
 

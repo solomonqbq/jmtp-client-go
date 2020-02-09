@@ -7,7 +7,12 @@ import (
     "github.com/jmtp/jmtp-client-go/util/fieldcodec"
 )
 
-var ConnectAckPacket = &ConnectAck{}
+var (
+    ConnectAckPacket = &ConnectAck{}
+    ConnectAckPacketCodecInstance = &connectAckPacketCodec{}
+    redirectFlag = util.NewBooleanFlag(byte(0x01))
+    retryFlag = util.NewBooleanFlag(byte(0x02))
+)
 
 type ConnectAck struct {
     Code    int
@@ -69,10 +74,6 @@ func (c *ConnectAckPacketDefine) Codec() jmtpClient.JmtpPacketCodec {
 func (c *ConnectAckPacketDefine) ProtocolDefine() jmtpClient.JmtpProtocolDefine {
     return JMTPV1ProtocolDefineInstance
 }
-
-var ConnectAckPacketCodecInstance = &connectAckPacketCodec{}
-var redirectFlag = util.NewBooleanFlag(byte(0x01))
-var retryFlag = util.NewBooleanFlag(byte(0x02))
 
 type connectAckPacketCodec struct {
 

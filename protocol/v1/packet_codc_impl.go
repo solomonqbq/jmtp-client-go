@@ -21,6 +21,12 @@ func encodeBody(packet jmtpClient.JmtpPacket) ([]byte, error) {
         err = subpackageCommandBody(writer, pack)
     case *CommandAck:
         err = subpackageCommandAckBody(writer, pack)
+    case *Disconnect:
+        err = subpackageDisconnectBody(writer, pack)
+    case *Report:
+        err = subpackageReportBody(writer, pack)
+    case *ReportAck:
+        err = subpackageReportAckBody(writer, pack)
     default:
         return nil, errors.New(
             fmt.Sprintf(
@@ -107,6 +113,55 @@ func subpackageCommandAckBody(writer *util.JMTPEncodingWriter, commandAck *Comma
     }
     if err := writer.WriteAllBytes(commandAck.Payload);err != nil {
         return err
+    }
+    return nil
+}
+
+func subpackageDisconnectBody(writer *util.JMTPEncodingWriter, disconnect *Disconnect) error {
+    if err := writer.WriteVarUnsignedInt(disconnect.GetCode());err != nil {
+        return err
+    }
+    if err := writer.WriteShortField(disconnect.GetMessage(), fieldcodec.StringCodec);err != nil {
+        return err
+    }
+    redirectUrl := disconnect.GetRedirectUrl()
+    if redirectUrl != "" {
+        writer.WriteTinyField(redirectUrl, fieldcodec.StringCodec)
+    }
+    return nil
+}
+
+func subpackageReportBody(writer *util.JMTPEncodingWriter, report *Report) error {
+    if report.IsHighQos() {
+        if err := writer.WriteTinyByte(report.GetPacketId());err != nil {
+            return err
+        }
+    }
+    if report.IsSpecificSerialize() {
+        if err := writer.WriteVarUnsignedShort(int(report.GetSerializeType()));err != nil {
+            return err
+        }
+    }
+    if err := writer.WriteVarUnsignedShort(int(report.GetReportType()));err != nil {
+        return err
+    }
+    if err := writer.WriteAllBytes(report.GetPayload());err != nil {
+        return err
+    }
+    return nil
+}
+
+func subpackageReportAckBody(writer *util.JMTPEncodingWriter, reportAck *ReportAck) error {
+    if err := writer.WriteTinyByte(reportAck.GetPacketId());err != nil {
+        return err
+    }
+    if err := writer.WriteVarUnsignedInt(reportAck.GetCode());err != nil {
+        return err
+    }
+    if reportAck.GetCode() != 0 {
+        if err := writer.WriteShortField(reportAck.GetMessage(), fieldcodec.StringCodec);err != nil {
+            return err
+        }
     }
     return nil
 }

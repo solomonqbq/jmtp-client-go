@@ -47,7 +47,7 @@ func (p *PongPacketDefine) CreatePacket() jmtpClient.JmtpPacket {
 }
 
 func (p *PongPacketDefine) Codec() jmtpClient.JmtpPacketCodec {
-    panic("implement me")
+    return PongPacketCodecInstance
 }
 
 func (p *PongPacketDefine) ProtocolDefine() jmtpClient.JmtpProtocolDefine {
@@ -55,6 +55,7 @@ func (p *PongPacketDefine) ProtocolDefine() jmtpClient.JmtpProtocolDefine {
 }
 
 var pongInstance = &Pong{}
+var PongPacketCodecInstance = &PongPacketCodec{}
 
 type PongPacketCodec struct {
 

@@ -26,12 +26,36 @@ type ConnectAckPacket interface {
     GetRedirectUrl() string
 }
 
+type DisconnectPacket interface {
+    JmtpPacket
+    GetCode() int
+    GetMessage() string
+    GetRedirectUrl() string
+}
+
 type CommandAckPacket interface {
     JmtpPacket
     GetPacketId() []byte
     GetCode() int
     GetMessage() string
     GetPayload() []byte
+}
+
+type ReportPacket interface {
+    JmtpPacket
+    GetPacketId() []byte
+    GetReportType() int16
+    GetSerializeType() int16
+    GetPayload() []byte
+    IsHighQos() bool
+    IsSpecificSerialize() bool
+}
+
+type ReportAckPacket interface {
+    JmtpPacket
+    GetPacketId() []byte
+    GetCode() int
+    GetMessage() string
 }
 
 type JmtpPacketCodec interface {
@@ -52,7 +76,7 @@ type JmtpPacketDefine interface {
 type JmtpProtocolDefine interface {
     Name() string
     Version() int16
-    PacketDefine(code int) JmtpPacketDefine
+    PacketDefine(code byte) JmtpPacketDefine
     ConnectPacket(option *ConnectOption) ConnectPacket
     PingPacket() PingPacket
     PongPacket() PingPacket

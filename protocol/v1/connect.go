@@ -17,6 +17,25 @@ type Connect struct {
     Tags    map[string]interface{}
 }
 
+func NewConnectPacket(protocolName string,
+    protocolVer int16,
+    heartbeatSec int16,
+    serializeType int16,
+    applicationId int,
+    instanceId int,
+    tags map[string]interface{}) *Connect {
+
+        return &Connect {
+            ProtocolName: protocolName,
+            ProtocolVersion: protocolVer,
+            HeartbeatSec: heartbeatSec,
+            SerializeType: serializeType,
+            ApplicationId: applicationId,
+            InstanceId: instanceId,
+            Tags: tags,
+        }
+}
+
 func (c *Connect) GetProtocolName() string {
     return c.ProtocolName
 }

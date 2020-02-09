@@ -18,7 +18,7 @@ func (j *JMTPV1ProtocolDefine) Version() int16 {
     return 1
 }
 
-func (j *JMTPV1ProtocolDefine) PacketDefine(code int) jmtpClient.JmtpPacketDefine {
+func (j *JMTPV1ProtocolDefine) PacketDefine(code byte) jmtpClient.JmtpPacketDefine {
     return JMTPV1PacketDefineInstance.Get(code)
 }
 
