@@ -106,7 +106,7 @@ func (r *JMTPDecodingReader) ReadTinyField(codec fieldcodec.FieldCodec) (interfa
 
 func (r *JMTPDecodingReader) ReadTinyBytesField() ([]byte, error) {
     len, err := r.ReadUnsignedTiny()
-    if err != nil {
+    if err != nil || len <= 0{
         return nil, err
     }
     return r.ReadBytes(int(len))
@@ -196,7 +196,7 @@ func (r *JMTPDecodingReader) ReadAllByte() ([]byte, error) {
 }
 
 func (r *JMTPDecodingReader) ReadBytes(size int) ([]byte, error) {
-    bytes := make([]byte, 0, size)
+    bytes := make([]byte, size)
     if size > 0 {
         num, err := r.reader.Read(bytes)
         if err != nil {

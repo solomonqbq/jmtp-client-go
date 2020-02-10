@@ -21,6 +21,7 @@ func newJMTPV1PacketDefine() *jmtpV1PacketDefine{
     jpd.packetDefines[CommandPacketDefineIns.Code()] = CommandPacketDefineIns
     jpd.packetDefines[DisconnectPacketDefineIns.Code()] = DisconnectPacketDefineIns
     jpd.packetDefines[ReportPacketDefineIns.Code()] = ReportPacketDefineIns
+    jpd.packetDefines[ReportAckPacketDefineIns.Code()] = ReportAckPacketDefineIns
     return jpd
 }
 

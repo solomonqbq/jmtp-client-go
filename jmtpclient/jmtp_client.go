@@ -113,7 +113,6 @@ func (c *jmtpClient) receivePackets() {
     reader := bufio.NewReader(c.connection)
     err := protocol.PacketDecoder(reader, c.packetChain, c.errorChain)
     if err != nil {
-        fmt.Println(err)
         c.connection.Close()
     }
 }
@@ -166,10 +165,12 @@ func (c *jmtpClient) chanListener() {
                     c.callBack(pack, err)
                     c.Close()
                 }
-            case *v1.Command:
-                // do command
+                break
             case *v1.Pong:
-                fmt.Println("Get pont packet")
+                break
+            case *v1.ReportAck:
+                c.callBack(packet, nil)
+                break
             default:
                 c.callBack(packet, nil)
             }

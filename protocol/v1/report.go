@@ -45,11 +45,11 @@ func (r *Report) GetPayload() []byte {
 }
 
 func (r *Report) IsHighQos() bool {
-    return r.IsHighQos()
+    return r.PacketId != nil && len(r.PacketId) > 0
 }
 
 func (r *Report) IsSpecificSerialize() bool {
-    return r.IsSpecificSerialize()
+    return r.SerializeType > 0
 }
 
 type ReportPacketDefine struct {

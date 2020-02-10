@@ -37,30 +37,34 @@ func PacketEncoder(packet jmtpClient.JmtpPacket) ([]byte, error) {
 func PacketDecoder(reader *bufio.Reader, packetsChain chan jmtpClient.JmtpPacket,errorChain chan error) error {
     for {
         if readPkg, err := reader.Peek(3);err == nil && len(readPkg) >= packetMinSize {
-            header, err := reader.ReadByte()
-            if err != nil {
-                continue
-            }
-            crc, err := reader.ReadByte()
-            if err != nil {
-                continue
-            }
-            crc = crc ^ 0xFF
+            header := readPkg[0]
+            crc := readPkg[1] ^ 0xFF
             if header != crc {
-                reader.Discard(reader.Buffered())
-                continue
+               return errors.New("check header error")
             }
-            packetDefine := v1.JMTPV1ProtocolDefineInstance.PacketDefine((header >> 4) & 0x0F)
+            idx := (header >> 4) & 0x0F
+            packetDefine := v1.JMTPV1ProtocolDefineInstance.PacketDefine(idx)
             if packetDefine == nil {
-                continue
+                return errors.New(fmt.Sprintf("can't find packet define, index=%d", idx))
             }
             flagBits := header & 0x0F
             if !packetDefine.CheckFlag(flagBits) {
                 // close & continue
+                return errors.New(fmt.Sprintf("invalid packet flag. channel will be close. head=%d", header))
+            }
+            if discarded, err := reader.Discard(2);err != nil || discarded != 2 {
+                if err != nil {
+                    return err
+                } else {
+                    return errors.New("reader discard failed")
+                }
             }
             remainingLength, err := util.DecodeRemainingLength(reader)
+            if err != nil {
+                return err
+            }
             if remainingLength < 0 {
-                // close & continue
+                continue
             }
             if remainingLength > 0 {
                 retryTimes := 0
@@ -71,15 +75,14 @@ func PacketDecoder(reader *bufio.Reader, packetsChain chan jmtpClient.JmtpPacket
                                 "can't read read enough byte stream, expect %d", remainingLength))
                         return err
                     }
-                    payload, err := reader.Peek(remainingLength)
-                    if err == nil && len(payload) == remainingLength {
+                    if payload, err := reader.Peek(remainingLength);err == nil && len(payload) == remainingLength {
                         if discarded, err := reader.Discard(len(payload));err != nil {
-                            return err
+                           return err
                         } else if discarded != len(payload) {
-                            return errors.New(
-                                fmt.Sprintf("discarded length %d not equal payload length %d",
-                                    len(payload),
-                                    discarded))
+                           return errors.New(
+                               fmt.Sprintf("discarded length %d not equal payload length %d",
+                                   len(payload),
+                                   discarded))
                         }
                         packet, err:= packetDefine.Codec().Decode(flagBits, bytes.NewReader(payload))
                         if err != nil {
