@@ -36,12 +36,11 @@ func PacketEncoder(packet jmtpClient.JmtpPacket) ([]byte, error) {
 
 func PacketDecoder(reader *bufio.Reader, packetsChain chan jmtpClient.JmtpPacket,errorChain chan error) error {
     for {
-        if readPkg, err := reader.Peek(3);err != nil && len(readPkg) >= packetMinSize {
+        if readPkg, err := reader.Peek(3);err == nil && len(readPkg) >= packetMinSize {
             header, err := reader.ReadByte()
             if err != nil {
                 continue
             }
-            fmt.Printf("header: %d\n", (header >> 4) & 0x0F)
             crc, err := reader.ReadByte()
             if err != nil {
                 continue
@@ -63,7 +62,6 @@ func PacketDecoder(reader *bufio.Reader, packetsChain chan jmtpClient.JmtpPacket
             if remainingLength < 0 {
                 // close & continue
             }
-            fmt.Println(remainingLength)
             if remainingLength > 0 {
                 retryTimes := 0
                 for {
@@ -74,10 +72,10 @@ func PacketDecoder(reader *bufio.Reader, packetsChain chan jmtpClient.JmtpPacket
                         return err
                     }
                     payload, err := reader.Peek(remainingLength)
-                    if err != nil && len(payload) == remainingLength {
+                    if err == nil && len(payload) == remainingLength {
                         if discarded, err := reader.Discard(len(payload));err != nil {
                             return err
-                        } else {
+                        } else if discarded != len(payload) {
                             return errors.New(
                                 fmt.Sprintf("discarded length %d not equal payload length %d",
                                     len(payload),
@@ -92,7 +90,6 @@ func PacketDecoder(reader *bufio.Reader, packetsChain chan jmtpClient.JmtpPacket
                         break
                     } else {
                         retryTimes += 1
-                        time.Sleep(time.Duration(1) & time.Millisecond)
                     }
                 }
             } else {

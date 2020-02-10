@@ -90,7 +90,7 @@ func (c *jmtpClient) Close() error {
 }
 
 func (c *jmtpClient) Destroy() error {
-    panic("implement me")
+    return nil
 }
 
 func (c *jmtpClient) SendPacket(packet jc.JmtpPacket) (int, error) {
@@ -137,10 +137,8 @@ func (c *jmtpClient) ping() {
     for {
         select {
         case <-ticker.C:
-            fmt.Println("Send ping packet")
             _, err := c.SendPacket(v1.JMTPV1ProtocolDefineInstance.PingPacket())
             if err != nil {
-                fmt.Printf("err: %v\n", err)
                 ticker.Stop()
             }
         case <-c.shutdownSignal:
@@ -163,7 +161,6 @@ func (c *jmtpClient) chanListener() {
         case packet := <- c.packetChain:
             switch pack := packet.(type) {
             case *v1.ConnectAck:
-                fmt.Printf("%v", pack)
                 if pack.Code != 0 {
                     err := errors.New("connect to server error, connect has been closed")
                     c.callBack(pack, err)
