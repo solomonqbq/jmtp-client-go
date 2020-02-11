@@ -165,13 +165,9 @@ func (c *jmtpClient) chanListener() {
                     c.callBack(pack, err)
                     c.Close()
                 }
-                break
             case *v1.Pong:
-                break
+                // TODO: check pong response, reconnect connection
             case *v1.ReportAck:
-                c.callBack(packet, nil)
-                break
-            default:
                 c.callBack(packet, nil)
             }
         case err := <- c.errorChain:
