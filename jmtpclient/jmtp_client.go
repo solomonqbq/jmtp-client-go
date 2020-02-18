@@ -1,99 +1,137 @@
 package jmtpclient
 
 import (
-    jc "github.com/jmtp/jmtp-client-go"
-    urlParser "net/url"
-    "strings"
-    "errors"
-    "strconv"
-    "fmt"
-    "net"
     "bufio"
+    "errors"
+    "fmt"
+    jc "github.com/jmtp/jmtp-client-go"
     "github.com/jmtp/jmtp-client-go/protocol"
     "github.com/jmtp/jmtp-client-go/protocol/v1"
+    "net"
+    urlParser "net/url"
+    "strconv"
+    "strings"
+    "sync"
     "time"
 )
 
 const jmtpProtocol = "jmtp"
+var mutex sync.Mutex
 
 type Config struct {
-    Url string
-    TimeoutSec  int
-    HeartbeatSec int
-    SerializeType int
-    ApplicationId int
-    InstanceId int
+    Url             string  // jmtp server 链接地址
+    TimeoutSec      int     // 链接超时时间
+    HeartbeatSec    int     // 发送心跳间隔（秒）
+    SerializeType   int     // 序列化协议
+    ApplicationId   int     // 应用 id TODO: 后续可能会被删除
+    InstanceId      int     // 实例 id TODO: 后续可能会被删除
+    ChanSize        int     // 初始化队列长度
 }
 
-type jmtpClient struct {
-    url string
-    jmtpUrl *jmtpUrl
-    connection  *net.TCPConn
-    hawkServer  *net.TCPAddr
-    callBack    jc.Callback
+type JmtpClient struct {
+    url             string
+    jmtpUrl         *jmtpUrl
+    connection      *net.TCPConn
+    hawkServer      *net.TCPAddr
+    callBack        jc.Callback
     connectSuccess  bool
-    packetChain chan jc.JmtpPacket
-    errorChain  chan error
-    clientConfig *Config
-    shutdownSignal  chan bool
+    packetChain     chan jc.JmtpPacket
+    errorChain      chan error
+    clientConfig    *Config
+    closePingSignal      chan bool
+    closeCallbackSignal  chan bool
+    isClosed        bool
 }
 
-func NewJmtpClient(config *Config, callback jc.Callback) (*jmtpClient, error) {
+func NewJmtpClient(config *Config, callback jc.Callback) (*JmtpClient, error) {
     urlParser, err := NewUrlParser(config.Url)
     if err != nil {
         return nil, err
     }
-    return &jmtpClient {
+    if config.ChanSize <= 0 {
+        config.ChanSize = 1000
+    }
+    return &JmtpClient {
         url: config.Url,
         callBack: callback,
-        packetChain: make(chan jc.JmtpPacket),
-        errorChain: make(chan error),
+        packetChain: make(chan jc.JmtpPacket, config.ChanSize),
+        errorChain: make(chan error, config.ChanSize),
         clientConfig: config,
-        shutdownSignal: make(chan bool, 1),
+        closePingSignal: make(chan bool, 1),
+        closeCallbackSignal: make(chan bool, 1),
         jmtpUrl: urlParser,
     }, nil
 }
 
-func (c *jmtpClient) Connect() error {
-    if c.url == "" {
-        return errors.New(fmt.Sprintf("invalidate jmtp connect url: %s", c.url))
-    }
-    hawkServer, err := net.ResolveTCPAddr("tcp", c.jmtpUrl.GetHost())
-    if err != nil {
-        return err
-    }
-    conn, err := net.DialTCP("tcp", nil, hawkServer)
-    if err != nil {
-        return err
-    }
-    c.hawkServer = hawkServer
-    c.connection = conn
-    err = c.sendConnectReq()
-    go c.receivePackets()
-    go c.chanListener()
-    go c.ping()
-
-    return err
+func (c *JmtpClient) IsClosed() bool {
+    return c.isClosed
 }
 
-func (c *jmtpClient) SetUrl(url string) {
+func (c *JmtpClient) Reconnect() error {
+    c.Close()
+    return c.Connect()
+}
+
+func (c *JmtpClient) Connect() error {
+    mutex.Lock()
+    defer mutex.Unlock()
+    if c.connection == nil {
+        if c.url == "" {
+            return errors.New(fmt.Sprintf("invalidate jmtp connect url: %s", c.url))
+        }
+        hawkServer, err := net.ResolveTCPAddr("tcp", c.jmtpUrl.GetHost())
+        if err != nil {
+            return err
+        }
+        conn, err := net.DialTCP("tcp", nil, hawkServer)
+        if err != nil {
+            return err
+        }
+        if err := conn.SetKeepAlive(true);err != nil {
+            return err
+        }
+        c.hawkServer = hawkServer
+        c.connection = conn
+        if err = c.sendConnectReq();err != nil {
+            return err
+
+        }
+        go c.receivePackets()
+        go c.chanListener()
+        go c.ping()
+    }
+    return nil
+}
+
+func (c *JmtpClient) SetUrl(url string) {
     c.url = url
 }
 
-func (c *jmtpClient) Close() error {
-    if c.connection != nil {
+func (c *JmtpClient) Close() error {
+    mutex.Lock()
+    defer mutex.Unlock()
+    if !c.isClosed && c.connection != nil {
+        c.isClosed = true
         c.disconnectReq()
-        c.shutdownSignal <- true
-        return c.connection.Close()
+        c.closeCallbackSignal <- true
+        c.closePingSignal <- true
+        err := c.connection.Close()
+        c.connection = nil
+        return err
     }
     return nil
 }
 
-func (c *jmtpClient) Destroy() error {
-    return nil
+func (c *JmtpClient) Destroy() error {
+    err := c.Close()
+    close(c.closeCallbackSignal)
+    close(c.closePingSignal)
+    close(c.errorChain)
+    close(c.packetChain)
+    return err
 }
 
-func (c *jmtpClient) SendPacket(packet jc.JmtpPacket) (int, error) {
+func (c *JmtpClient) SendPacket(packet jc.JmtpPacket) (int, error) {
     if c.connection != nil {
         out, err := protocol.PacketEncoder(packet)
         if err != nil {
@@ -105,19 +143,22 @@ func (c *jmtpClient) SendPacket(packet jc.JmtpPacket) (int, error) {
     }
 }
 
-func (c *jmtpClient) Reset() error {
+func (c *JmtpClient) Reset() error {
     return nil
 }
 
-func (c *jmtpClient) receivePackets() {
+func (c *JmtpClient) receivePackets() {
     reader := bufio.NewReader(c.connection)
     err := protocol.PacketDecoder(reader, c.packetChain, c.errorChain)
     if err != nil {
-        c.connection.Close()
+        if !c.IsClosed() {
+            c.callBack(nil, err)
+            c.Close()
+        }
     }
 }
 
-func (c *jmtpClient) sendConnectReq() error{
+func (c *JmtpClient) sendConnectReq() error{
     option := &jc.ConnectOption{
         HeartbeatSeconds: int16(c.clientConfig.HeartbeatSec),
         SerializeType: int16(c.clientConfig.SerializeType),
@@ -129,7 +170,7 @@ func (c *jmtpClient) sendConnectReq() error{
     return err
 }
 
-func (c *jmtpClient) ping() {
+func (c *JmtpClient) ping() {
     ticker := time.NewTicker(
         time.Duration(c.clientConfig.HeartbeatSec) * time.Second)
     defer ticker.Stop()
@@ -140,13 +181,13 @@ func (c *jmtpClient) ping() {
             if err != nil {
                 ticker.Stop()
             }
-        case <-c.shutdownSignal:
+        case <- c.closePingSignal:
             break
         }
     }
 }
 
-func (c * jmtpClient) disconnectReq() error{
+func (c *JmtpClient) disconnectReq() error{
     disconnect := &v1.Disconnect{
         RedirectUrl: c.jmtpUrl.ToUrlString(),
     }
@@ -154,7 +195,7 @@ func (c * jmtpClient) disconnectReq() error{
     return err
 }
 
-func (c *jmtpClient) chanListener() {
+func (c *JmtpClient) chanListener() {
     for {
         select {
         case packet := <- c.packetChain:
@@ -172,7 +213,7 @@ func (c *jmtpClient) chanListener() {
             }
         case err := <- c.errorChain:
             c.callBack(nil, err)
-        case <- c.shutdownSignal:
+        case <- c.closeCallbackSignal:
             break
         }
     }

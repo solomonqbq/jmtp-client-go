@@ -1,14 +1,15 @@
 package protocol
 
 import (
-    jmtpClient "github.com/jmtp/jmtp-client-go"
-    "bytes"
-    "github.com/jmtp/jmtp-client-go/util"
     "bufio"
-    "fmt"
-    "github.com/jmtp/jmtp-client-go/protocol/v1"
-    "time"
+    "bytes"
     "errors"
+    "fmt"
+    jmtpClient "github.com/jmtp/jmtp-client-go"
+    "github.com/jmtp/jmtp-client-go/protocol/v1"
+    "github.com/jmtp/jmtp-client-go/util"
+    "io"
+    "time"
 )
 
 const packetMinSize = 3
@@ -104,7 +105,15 @@ func PacketDecoder(reader *bufio.Reader, packetsChain chan jmtpClient.JmtpPacket
                 }
             }
         } else {
+            if err != nil {
+                if err == io.EOF {
+                    break
+                } else {
+                    return err
+                }
+            }
             time.Sleep(time.Duration(1) * time.Millisecond)
         }
     }
+    return nil
 }

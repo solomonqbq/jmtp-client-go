@@ -39,6 +39,9 @@ func TestJmtpClient(t *testing.T) {
             t.Error(err)
             i--
         }
+        if i == 3 {
+            client.Reconnect()
+        }
         time.Sleep(time.Duration(3000) * time.Millisecond)
 
     }
