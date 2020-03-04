@@ -1,11 +1,11 @@
 package test
 
 import (
-    "testing"
-    "github.com/jmtp/jmtp-client-go/jmtpclient"
-    "github.com/jmtp/jmtp-client-go"
     "fmt"
+    "github.com/jmtp/jmtp-client-go"
+    "github.com/jmtp/jmtp-client-go/jmtpclient"
     "github.com/jmtp/jmtp-client-go/protocol/v1"
+    "testing"
     "time"
 )
 
