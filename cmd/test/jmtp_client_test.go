@@ -35,6 +35,7 @@ func TestJmtpClient(t *testing.T) {
         report.PacketId = []byte{0x01}
         report.ReportType = 1
         report.Payload = []byte{byte(i)}
+        report.SerializeType = 3
         if _, err := client.SendPacket(report); err != nil {
             t.Error(err)
             i--
