@@ -92,6 +92,7 @@ func (c *JmtpClient) Connect() error {
         }
         c.hawkServer = hawkServer
         c.connection = conn
+        c.isClosed = false
         if err = c.sendConnectReq();err != nil {
             return err
 
