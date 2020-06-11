@@ -52,7 +52,7 @@ func (d *DisconnectPacketDefine) Code() byte {
 }
 
 func (d *DisconnectPacketDefine) CheckFlag(flagBits byte) bool {
-    return flagBits == 0
+    return (flagBits & 0xE) == 0
 }
 
 func (d *DisconnectPacketDefine) CreatePacket() jmtpClient.JmtpPacket {

@@ -30,7 +30,7 @@ func TestJmtpClient(t *testing.T) {
     if err != nil {
         t.Error(err)
     }
-    for i := 0; i < 5; i++ {
+    for i := 0; i < 10; i++ {
         report := &v1.Report{}
         report.PacketId = []byte{0x01}
         report.ReportType = 1
@@ -39,9 +39,6 @@ func TestJmtpClient(t *testing.T) {
         if _, err := client.SendPacket(report); err != nil {
             t.Error(err)
             i--
-        }
-        if i == 3 {
-            client.Reconnect()
         }
         time.Sleep(time.Duration(3000) * time.Millisecond)
 

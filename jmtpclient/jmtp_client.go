@@ -12,6 +12,7 @@ import (
     "strconv"
     "strings"
     "sync"
+    "sync/atomic"
     "time"
 )
 
@@ -40,7 +41,7 @@ type JmtpClient struct {
     clientConfig    *Config
     closePingSignal      chan bool
     closeCallbackSignal  chan bool
-    isClosed        bool
+    isClosed        atomic.Value
 }
 
 func NewJmtpClient(config *Config, callback jc.Callback) (*JmtpClient, error) {
@@ -64,7 +65,7 @@ func NewJmtpClient(config *Config, callback jc.Callback) (*JmtpClient, error) {
 }
 
 func (c *JmtpClient) IsClosed() bool {
-    return c.isClosed
+    return c.isClosed.Load().(bool)
 }
 
 func (c *JmtpClient) Reconnect() error {
@@ -92,7 +93,7 @@ func (c *JmtpClient) Connect() error {
         }
         c.hawkServer = hawkServer
         c.connection = conn
-        c.isClosed = false
+        c.isClosed.Store(false)
         if err = c.sendConnectReq();err != nil {
             return err
 
@@ -111,8 +112,8 @@ func (c *JmtpClient) SetUrl(url string) {
 func (c *JmtpClient) Close() error {
     mutex.Lock()
     defer mutex.Unlock()
-    if !c.isClosed && c.connection != nil {
-        c.isClosed = true
+    if !c.isClosed.Load().(bool) && c.connection != nil {
+        c.isClosed.Store(true)
         c.disconnectReq()
         c.closeCallbackSignal <- true
         c.closePingSignal <- true
@@ -133,7 +134,15 @@ func (c *JmtpClient) Destroy() error {
 }
 
 func (c *JmtpClient) SendPacket(packet jc.JmtpPacket) (int, error) {
-    if c.connection != nil {
+    for i := 0; i < 10; i++ {
+        // 如果发现连接被关闭则循环等待，直到连接被重建
+        if c.IsClosed() {
+            time.Sleep(time.Duration(1) * time.Millisecond)
+        } else {
+            break
+        }
+    }
+    if c.connection != nil && !c.IsClosed() {
         out, err := protocol.PacketEncoder(packet)
         if err != nil {
             return 0, err
@@ -211,6 +220,14 @@ func (c *JmtpClient) chanListener() {
                 // TODO: check pong response, reconnect connection
             case *v1.ReportAck:
                 c.callBack(packet, nil)
+            case *v1.Disconnect:
+                if "" != pack.RedirectUrl {
+                    if jmtpUrl, err := NewUrlParser(pack.RedirectUrl);err == nil {
+                        c.url = pack.RedirectUrl
+                        c.jmtpUrl = jmtpUrl
+                        c.Reconnect()
+                    }
+                }
             }
         case err := <- c.errorChain:
             c.callBack(nil, err)
