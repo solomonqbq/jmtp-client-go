@@ -51,7 +51,8 @@ func PacketDecoder(reader *bufio.Reader, packetsChain chan jmtpClient.JmtpPacket
             flagBits := header & 0x0F
             if !packetDefine.CheckFlag(flagBits) {
                 // close & continue
-                return errors.New(fmt.Sprintf("invalid packet flag. channel will be close. head=%d", header))
+                return errors.New(
+                    fmt.Sprintf("invalid packet flag. channel will be close. head=%d, idx=%d", header, idx))
             }
             if discarded, err := reader.Discard(2);err != nil || discarded != 2 {
                 if err != nil {
